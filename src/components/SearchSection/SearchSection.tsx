@@ -49,7 +49,11 @@ class SearchSection extends Component<SearchSectionProps, SearchSectionState> {
           onChange={this.handleChange}
           placeholder="Search by character name..."
         />
-        <button className="search-btn" type="button" onClick={this.handleSearch}>
+        <button
+          className="search-btn"
+          type="button"
+          onClick={this.handleSearch}
+        >
           Search
         </button>
       </div>

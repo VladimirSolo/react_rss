@@ -15,7 +15,10 @@ interface ResultsSectionState {
   items: Character[];
 }
 
-class ResultsSection extends Component<ResultsSectionProps, ResultsSectionState> {
+class ResultsSection extends Component<
+  ResultsSectionProps,
+  ResultsSectionState
+> {
   constructor(props: ResultsSectionProps) {
     super(props);
     this.state = { loading: false, error: null, items: [] };
@@ -44,7 +47,9 @@ class ResultsSection extends Component<ResultsSectionProps, ResultsSectionState>
       .then((response): Promise<ApiResponse | null> => {
         if (response.status === 404) return Promise.resolve(null);
         if (!response.ok) {
-          throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Request failed: ${response.status} ${response.statusText}`
+          );
         }
         return response.json() as Promise<ApiResponse>;
       })
@@ -52,7 +57,8 @@ class ResultsSection extends Component<ResultsSectionProps, ResultsSectionState>
         this.setState({ loading: false, items: data ? data.results : [] });
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+        const message =
+          err instanceof Error ? err.message : 'An unexpected error occurred';
         this.setState({ loading: false, error: message });
       });
   };

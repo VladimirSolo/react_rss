@@ -4,8 +4,8 @@ interface ErrorButtonState {
   shouldThrow: boolean;
 }
 
-class ErrorButton extends Component<{}, ErrorButtonState> {
-  constructor(props: {}) {
+class ErrorButton extends Component<object, ErrorButtonState> {
+  constructor(props: object) {
     super(props);
     this.state = { shouldThrow: false };
   }
