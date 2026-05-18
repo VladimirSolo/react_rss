@@ -1,20 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SearchSection from './SearchSection';
-
-const STORAGE_KEY = 'searchTerm';
 
 describe('SearchSection', () => {
   const onSearch = vi.fn();
 
   beforeEach(() => {
-    localStorage.clear();
     onSearch.mockClear();
-  });
-
-  afterEach(() => {
-    localStorage.clear();
   });
 
   it('renders search input and search button', () => {
@@ -50,24 +43,14 @@ describe('SearchSection', () => {
     expect(onSearch).toHaveBeenCalledWith('morty');
   });
 
-  it('saves trimmed search term to localStorage when search button is clicked', async () => {
+  it('calls onSearch only once even with whitespace variations', async () => {
     const user = userEvent.setup();
     render(<SearchSection initialValue="" onSearch={onSearch} />);
     const input = screen.getByPlaceholderText('Search by character name...');
     await user.type(input, 'rick');
     await user.click(screen.getByRole('button', { name: 'Search' }));
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('rick');
-  });
-
-  it('overwrites existing localStorage value with new search term', async () => {
-    const user = userEvent.setup();
-    localStorage.setItem(STORAGE_KEY, 'old-value');
-    render(<SearchSection initialValue="old-value" onSearch={onSearch} />);
-    const input = screen.getByPlaceholderText('Search by character name...');
-    await user.clear(input);
-    await user.type(input, 'new-value');
-    await user.click(screen.getByRole('button', { name: 'Search' }));
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('new-value');
+    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(onSearch).toHaveBeenCalledWith('rick');
   });
 
   it('does not call onSearch if search term has not changed', async () => {
@@ -77,17 +60,26 @@ describe('SearchSection', () => {
     expect(onSearch).not.toHaveBeenCalled();
   });
 
-  it('trims whitespace from search input before saving to localStorage', async () => {
+  it('calls onSearch with empty string when input is cleared', async () => {
     const user = userEvent.setup();
-    render(<SearchSection initialValue="" onSearch={onSearch} />);
+    render(<SearchSection initialValue="rick" onSearch={onSearch} />);
     const input = screen.getByPlaceholderText('Search by character name...');
-    await user.type(input, '   summer   ');
+    await user.clear(input);
     await user.click(screen.getByRole('button', { name: 'Search' }));
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('summer');
+    expect(onSearch).toHaveBeenCalledWith('');
   });
 
   it('renders Rick & Morty heading', () => {
     render(<SearchSection initialValue="" onSearch={onSearch} />);
     expect(screen.getByText('Rick & Morty')).toBeInTheDocument();
+  });
+
+  it('trims whitespace before calling onSearch', async () => {
+    const user = userEvent.setup();
+    render(<SearchSection initialValue="" onSearch={onSearch} />);
+    const input = screen.getByPlaceholderText('Search by character name...');
+    await user.type(input, '   summer   ');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    expect(onSearch).toHaveBeenCalledWith('summer');
   });
 });

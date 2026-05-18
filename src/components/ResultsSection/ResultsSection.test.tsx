@@ -1,13 +1,34 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import ResultsSection from './ResultsSection';
 import { ApiResponse } from '../../types';
 
 const mockApiResponse: ApiResponse = {
   info: { count: 2, pages: 1, next: null, prev: null },
   results: [
-    { id: 1, name: 'Rick Sanchez', status: 'Alive', species: 'Human' },
-    { id: 2, name: 'Morty Smith', status: 'Alive', species: 'Human' },
+    {
+      id: 1,
+      name: 'Rick Sanchez',
+      status: 'Alive',
+      species: 'Human',
+      type: '',
+      gender: 'Male',
+      origin: { name: 'Earth', url: '' },
+      location: { name: 'Earth', url: '' },
+      image: '',
+    },
+    {
+      id: 2,
+      name: 'Morty Smith',
+      status: 'Alive',
+      species: 'Human',
+      type: '',
+      gender: 'Male',
+      origin: { name: 'Earth', url: '' },
+      location: { name: 'Earth', url: '' },
+      image: '',
+    },
   ],
 };
 
@@ -28,6 +49,14 @@ function makeFetchStatus(status: number) {
   } as unknown as Response);
 }
 
+function renderWithRouter(searchTerm: string, initialPath = '/?page=1') {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <ResultsSection searchTerm={searchTerm} />
+    </MemoryRouter>
+  );
+}
+
 describe('ResultsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,13 +68,13 @@ describe('ResultsSection', () => {
 
   it('shows spinner while loading', () => {
     globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
-    render(<ResultsSection searchTerm="" />);
+    renderWithRouter('');
     expect(document.querySelector('.spinner')).toBeInTheDocument();
   });
 
   it('renders list of characters on successful API response', async () => {
     globalThis.fetch = makeFetchOk(mockApiResponse);
-    render(<ResultsSection searchTerm="" />);
+    renderWithRouter('');
     await waitFor(() => {
       expect(screen.getByText('Rick Sanchez')).toBeInTheDocument();
       expect(screen.getByText('Morty Smith')).toBeInTheDocument();
@@ -54,7 +83,7 @@ describe('ResultsSection', () => {
 
   it('shows "no results" message when API returns 404', async () => {
     globalThis.fetch = makeFetchStatus(404);
-    render(<ResultsSection searchTerm="nonexistent" />);
+    renderWithRouter('nonexistent');
     await waitFor(() => {
       expect(screen.getByText('No characters found.')).toBeInTheDocument();
     });
@@ -62,37 +91,47 @@ describe('ResultsSection', () => {
 
   it('shows error message when API returns 5xx', async () => {
     globalThis.fetch = makeFetchStatus(500);
-    render(<ResultsSection searchTerm="" />);
+    renderWithRouter('');
     await waitFor(() => {
-      expect(screen.getByText(/Request failed: 500/)).toBeInTheDocument();
+      expect(screen.getByText(/500 Internal Server Error/)).toBeInTheDocument();
     });
   });
 
   it('calls fetch with search term in URL', async () => {
     globalThis.fetch = makeFetchOk(mockApiResponse);
-    render(<ResultsSection searchTerm="rick" />);
+    renderWithRouter('rick');
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('name=rick')
+        expect.stringContaining('name=rick'),
+        expect.any(Object)
       );
     });
   });
 
   it('calls fetch without name param when searchTerm is empty', async () => {
     globalThis.fetch = makeFetchOk(mockApiResponse);
-    render(<ResultsSection searchTerm="" />);
+    renderWithRouter('');
     await waitFor(() => {
-      const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as string;
       expect(url).not.toContain('name=');
     });
   });
 
   it('refetches when searchTerm prop changes', async () => {
     globalThis.fetch = makeFetchOk(mockApiResponse);
-    const { rerender } = render(<ResultsSection searchTerm="rick" />);
+    const { rerender } = render(
+      <MemoryRouter initialEntries={['/?page=1']}>
+        <ResultsSection searchTerm="rick" />
+      </MemoryRouter>
+    );
     await waitFor(() => screen.getByText('Rick Sanchez'));
 
-    rerender(<ResultsSection searchTerm="morty" />);
+    rerender(
+      <MemoryRouter initialEntries={['/?page=1']}>
+        <ResultsSection searchTerm="morty" />
+      </MemoryRouter>
+    );
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledTimes(2);
     });
@@ -100,16 +139,24 @@ describe('ResultsSection', () => {
 
   it('does not refetch when searchTerm prop stays the same', async () => {
     globalThis.fetch = makeFetchOk(mockApiResponse);
-    const { rerender } = render(<ResultsSection searchTerm="rick" />);
+    const { rerender } = render(
+      <MemoryRouter initialEntries={['/?page=1']}>
+        <ResultsSection searchTerm="rick" />
+      </MemoryRouter>
+    );
     await waitFor(() => screen.getByText('Rick Sanchez'));
 
-    rerender(<ResultsSection searchTerm="rick" />);
+    rerender(
+      <MemoryRouter initialEntries={['/?page=1']}>
+        <ResultsSection searchTerm="rick" />
+      </MemoryRouter>
+    );
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('handles network error gracefully', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
-    render(<ResultsSection searchTerm="" />);
+    renderWithRouter('');
     await waitFor(() => {
       expect(screen.getByText('Network error')).toBeInTheDocument();
     });
@@ -117,17 +164,35 @@ describe('ResultsSection', () => {
 
   it('handles unknown error type gracefully', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue('string error');
-    render(<ResultsSection searchTerm="" />);
+    renderWithRouter('');
     await waitFor(() => {
-      expect(screen.getByText('An unexpected error occurred')).toBeInTheDocument();
+      expect(screen.getByText('Unexpected error')).toBeInTheDocument();
     });
   });
 
   it('shows empty list when API returns empty results', async () => {
     globalThis.fetch = makeFetchOk({ ...mockApiResponse, results: [] });
-    render(<ResultsSection searchTerm="" />);
+    renderWithRouter('');
     await waitFor(() => {
       expect(screen.getByText('No characters found.')).toBeInTheDocument();
     });
+  });
+
+  it('shows pagination when totalPages > 1', async () => {
+    globalThis.fetch = makeFetchOk({
+      ...mockApiResponse,
+      info: { count: 40, pages: 2, next: 'url', prev: null },
+    });
+    renderWithRouter('');
+    await waitFor(() => {
+      expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    });
+  });
+
+  it('does not show pagination when totalPages is 1', async () => {
+    globalThis.fetch = makeFetchOk(mockApiResponse);
+    renderWithRouter('');
+    await waitFor(() => screen.getByText('Rick Sanchez'));
+    expect(screen.queryByText(/\/ 1/)).not.toBeInTheDocument();
   });
 });
