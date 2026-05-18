@@ -1,48 +1,31 @@
-import { Component, ReactNode } from 'react';
+import { Route, Routes } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
-import SearchSection from './components/SearchSection/SearchSection';
-import ResultsSection from './components/ResultsSection/ResultsSection';
 import ErrorButton from './components/ErrorButton/ErrorButton';
+import Navigation from './components/Navigation/Navigation';
+import DetailPanel from './components/DetailPanel/DetailPanel';
+import MainPage from './pages/MainPage/MainPage';
+import AboutPage from './pages/AboutPage/AboutPage';
+import NotFoundPage from './pages/NotFoundPage/NotFoundPage';
 import './App.css';
 
-const STORAGE_KEY = 'searchTerm';
-
-interface AppState {
-  searchTerm: string;
-}
-
-class App extends Component<object, AppState> {
-  constructor(props: object) {
-    super(props);
-    this.state = {
-      searchTerm: localStorage.getItem(STORAGE_KEY) ?? '',
-    };
-  }
-
-  handleSearch = (term: string): void => {
-    this.setState({ searchTerm: term });
-  };
-
-  render(): ReactNode {
-    const { searchTerm } = this.state;
-
-    return (
-      <div className="app">
-        <ErrorBoundary>
-          <SearchSection
-            initialValue={searchTerm}
-            onSearch={this.handleSearch}
-          />
-          <main className="results-section">
-            <ResultsSection searchTerm={searchTerm} />
-          </main>
-          <div className="footer-area">
-            <ErrorButton />
-          </div>
-        </ErrorBoundary>
-      </div>
-    );
-  }
+function App(): JSX.Element {
+  return (
+    <div className="app">
+      <ErrorBoundary>
+        <Navigation />
+        <Routes>
+          <Route path="/" element={<MainPage />}>
+            <Route path="details/:id" element={<DetailPanel />} />
+          </Route>
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+        <div className="footer-area">
+          <ErrorButton />
+        </div>
+      </ErrorBoundary>
+    </div>
+  );
 }
 
 export default App;
