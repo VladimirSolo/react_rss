@@ -1,6 +1,8 @@
-import { Component, ReactNode } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ApiResponse, Character } from '../../types';
 import CardList from '../CardList/CardList';
+import Pagination from '../Pagination/Pagination';
 import Spinner from '../Spinner/Spinner';
 
 const API_BASE = 'https://rickandmortyapi.com/api/character';
@@ -9,67 +11,80 @@ interface ResultsSectionProps {
   searchTerm: string;
 }
 
-interface ResultsSectionState {
-  loading: boolean;
-  error: string | null;
-  items: Character[];
-}
+export default function ResultsSection({ searchTerm }: ResultsSectionProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Number(searchParams.get('page') ?? 1);
 
-class ResultsSection extends Component<
-  ResultsSectionProps,
-  ResultsSectionState
-> {
-  constructor(props: ResultsSectionProps) {
-    super(props);
-    this.state = { loading: false, error: null, items: [] };
-  }
+  const [items, setItems] = useState<Character[]>([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  componentDidMount(): void {
-    const { searchTerm } = this.props;
-    this.fetchData(searchTerm);
-  }
+  useEffect(() => {
+    const controller = new AbortController();
 
-  componentDidUpdate(prevProps: ResultsSectionProps): void {
-    const { searchTerm } = this.props;
-    if (prevProps.searchTerm !== searchTerm) {
-      this.fetchData(searchTerm);
-    }
-  }
+    async function load() {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-  fetchData = (searchTerm: string): void => {
-    const url = searchTerm
-      ? `${API_BASE}?name=${encodeURIComponent(searchTerm)}&page=1`
-      : `${API_BASE}?page=1`;
+        const url = searchTerm
+          ? `${API_BASE}?name=${encodeURIComponent(searchTerm)}&page=${page}`
+          : `${API_BASE}?page=${page}`;
 
-    this.setState({ loading: true, error: null, items: [] });
+        const response = await fetch(url, { signal: controller.signal });
 
-    fetch(url)
-      .then((response): Promise<ApiResponse | null> => {
-        if (response.status === 404) return Promise.resolve(null);
-        if (!response.ok) {
-          throw new Error(
-            `Request failed: ${response.status} ${response.statusText}`
-          );
+        if (response.status === 404) {
+          setItems([]);
+          setTotalPages(0);
+          return;
         }
-        return response.json() as Promise<ApiResponse>;
-      })
-      .then((data) => {
-        this.setState({ loading: false, items: data ? data.results : [] });
-      })
-      .catch((err: unknown) => {
-        const message =
-          err instanceof Error ? err.message : 'An unexpected error occurred';
-        this.setState({ loading: false, error: message });
-      });
+
+        if (!response.ok) {
+          throw new Error(`${response.status} ${response.statusText}`);
+        }
+
+        const data: ApiResponse = await response.json();
+
+        setItems(data.results);
+        setTotalPages(data.info.pages);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+
+        setError(err instanceof Error ? err.message : 'Unexpected error');
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    load();
+
+    return () => controller.abort();
+  }, [searchTerm, page]);
+
+  const handlePageChange = (newPage: number) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('page', String(newPage));
+      return next;
+    });
   };
 
-  render(): ReactNode {
-    const { loading, error, items } = this.state;
+  if (isLoading) return <Spinner />;
+  if (error) return <div className="error-message">{error}</div>;
 
-    if (loading) return <Spinner />;
-    if (error) return <div className="error-message">{error}</div>;
-    return <CardList items={items} />;
-  }
+  return (
+    <>
+      <CardList items={items} />
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      )}
+    </>
+  );
 }
-
-export default ResultsSection;
