@@ -1,36 +1,21 @@
-import { Component, ReactNode } from 'react';
+import { useState } from 'react';
 
-interface ErrorButtonState {
-  shouldThrow: boolean;
-}
+function ErrorButton(): JSX.Element {
+  const [shouldThrow, setShouldThrow] = useState(false);
 
-class ErrorButton extends Component<object, ErrorButtonState> {
-  constructor(props: object) {
-    super(props);
-    this.state = { shouldThrow: false };
+  if (shouldThrow) {
+    throw new Error('Test error triggered by user');
   }
 
-  handleClick = (): void => {
-    this.setState({ shouldThrow: true });
-  };
-
-  render(): ReactNode {
-    const { shouldThrow } = this.state;
-
-    if (shouldThrow) {
-      throw new Error('Test error triggered by user');
-    }
-
-    return (
-      <button
-        className="error-trigger-btn"
-        type="button"
-        onClick={this.handleClick}
-      >
-        Throw Error
-      </button>
-    );
-  }
+  return (
+    <button
+      className="error-trigger-btn"
+      type="button"
+      onClick={() => setShouldThrow(true)}
+    >
+      Throw Error
+    </button>
+  );
 }
 
 export default ErrorButton;
