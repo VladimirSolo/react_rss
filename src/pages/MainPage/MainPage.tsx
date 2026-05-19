@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   Outlet,
   useLocation,
@@ -14,6 +15,12 @@ function MainPage(): JSX.Element {
   const [searchParams] = useSearchParams();
   const { pathname } = useLocation();
   const hasDetail = pathname !== '/';
+
+  useEffect(() => {
+    if (!searchParams.get('page')) {
+      navigate('/?page=1', { replace: true });
+    }
+  }, [navigate, searchParams]);
 
   const handleSearch = (term: string): void => {
     setSearchTerm(term);
