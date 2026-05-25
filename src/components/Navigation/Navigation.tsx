@@ -1,6 +1,9 @@
 import { NavLink } from 'react-router-dom';
+import { useTheme } from '../../hooks/useTheme';
 
 function Navigation(): JSX.Element {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <nav className="nav">
       <NavLink
@@ -16,6 +19,9 @@ function Navigation(): JSX.Element {
       >
         About
       </NavLink>
+      <button className="theme-toggle" type="button" onClick={toggleTheme}>
+        {theme === 'light' ? 'Dark mode' : 'Light mode'}
+      </button>
     </nav>
   );
 }
