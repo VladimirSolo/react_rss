@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ResultsSection from './ResultsSection';
 import { ApiResponse } from '../../types';
 
@@ -32,6 +34,14 @@ const mockApiResponse: ApiResponse = {
   ],
 };
 
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity },
+    },
+  });
+}
+
 function makeFetchOk(data: ApiResponse) {
   return vi.fn().mockResolvedValue({
     ok: true,
@@ -49,11 +59,17 @@ function makeFetchStatus(status: number) {
   } as unknown as Response);
 }
 
-function renderWithRouter(searchTerm: string, initialPath = '/?page=1') {
+function renderWithRouter(
+  searchTerm: string,
+  initialPath = '/?page=1',
+  queryClient = makeQueryClient()
+) {
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <ResultsSection searchTerm={searchTerm} />
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <ResultsSection searchTerm={searchTerm} />
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -120,17 +136,22 @@ describe('ResultsSection', () => {
 
   it('refetches when searchTerm prop changes', async () => {
     globalThis.fetch = makeFetchOk(mockApiResponse);
+    const queryClient = makeQueryClient();
     const { rerender } = render(
-      <MemoryRouter initialEntries={['/?page=1']}>
-        <ResultsSection searchTerm="rick" />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/?page=1']}>
+          <ResultsSection searchTerm="rick" />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
     await waitFor(() => screen.getByText('Rick Sanchez'));
 
     rerender(
-      <MemoryRouter initialEntries={['/?page=1']}>
-        <ResultsSection searchTerm="morty" />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/?page=1']}>
+          <ResultsSection searchTerm="morty" />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledTimes(2);
@@ -139,17 +160,22 @@ describe('ResultsSection', () => {
 
   it('does not refetch when searchTerm prop stays the same', async () => {
     globalThis.fetch = makeFetchOk(mockApiResponse);
+    const queryClient = makeQueryClient();
     const { rerender } = render(
-      <MemoryRouter initialEntries={['/?page=1']}>
-        <ResultsSection searchTerm="rick" />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/?page=1']}>
+          <ResultsSection searchTerm="rick" />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
     await waitFor(() => screen.getByText('Rick Sanchez'));
 
     rerender(
-      <MemoryRouter initialEntries={['/?page=1']}>
-        <ResultsSection searchTerm="rick" />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/?page=1']}>
+          <ResultsSection searchTerm="rick" />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
@@ -194,5 +220,37 @@ describe('ResultsSection', () => {
     renderWithRouter('');
     await waitFor(() => screen.getByText('Rick Sanchez'));
     expect(screen.queryByText(/\/ 1/)).not.toBeInTheDocument();
+  });
+
+  it('renders refresh button', async () => {
+    globalThis.fetch = makeFetchOk(mockApiResponse);
+    renderWithRouter('');
+    await waitFor(() => screen.getByText('Rick Sanchez'));
+    expect(screen.getByRole('button', { name: /Refresh results/i })).toBeInTheDocument();
+  });
+
+  it('invalidates cache and refetches when refresh button is clicked', async () => {
+    globalThis.fetch = makeFetchOk(mockApiResponse);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/?page=1']}>
+          <ResultsSection searchTerm="" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => screen.getByText('Rick Sanchez'));
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Refresh results/i }));
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    });
   });
 });

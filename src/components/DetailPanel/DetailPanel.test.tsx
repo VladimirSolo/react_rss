@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DetailPanel from './DetailPanel';
 import { Character } from '../../types';
 
@@ -17,13 +18,23 @@ const mockCharacter: Character = {
   image: 'https://example.com/rick.png',
 };
 
-function renderDetailPanel(id = '1', page = '1') {
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity },
+    },
+  });
+}
+
+function renderDetailPanel(id = '1', page = '1', queryClient = makeQueryClient()) {
   return render(
-    <MemoryRouter initialEntries={[`/details/${id}?page=${page}`]}>
-      <Routes>
-        <Route path="/details/:id" element={<DetailPanel />} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[`/details/${id}?page=${page}`]}>
+        <Routes>
+          <Route path="/details/:id" element={<DetailPanel />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -92,6 +103,14 @@ describe('DetailPanel', () => {
     expect(screen.getByRole('button', { name: /Close/ })).toBeInTheDocument();
   });
 
+  it('renders refresh button', async () => {
+    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
+    renderDetailPanel();
+    expect(
+      screen.getByRole('button', { name: /Refresh details/i })
+    ).toBeInTheDocument();
+  });
+
   it('navigates back on close button click', async () => {
     const user = userEvent.setup();
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -101,12 +120,14 @@ describe('DetailPanel', () => {
     } as unknown as Response);
 
     render(
-      <MemoryRouter initialEntries={['/details/1?page=2']}>
-        <Routes>
-          <Route path="/" element={<div>Main Page</div>} />
-          <Route path="/details/:id" element={<DetailPanel />} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={makeQueryClient()}>
+        <MemoryRouter initialEntries={['/details/1?page=2']}>
+          <Routes>
+            <Route path="/" element={<div>Main Page</div>} />
+            <Route path="/details/:id" element={<DetailPanel />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     await waitFor(() => screen.getByText('Rick Sanchez'));
@@ -127,5 +148,57 @@ describe('DetailPanel', () => {
       expect(img).toBeInTheDocument();
       expect(img).toHaveAttribute('src', 'https://example.com/rick.png');
     });
+  });
+
+  it('invalidates cache and refetches when refresh button is clicked', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(mockCharacter),
+    } as unknown as Response);
+
+    renderDetailPanel();
+    await waitFor(() => screen.getByText('Rick Sanchez'));
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Refresh details/i }));
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('caches data — does not refetch for same id', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(mockCharacter),
+    } as unknown as Response);
+
+    const queryClient = makeQueryClient();
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/details/1']}>
+          <Routes>
+            <Route path="/details/:id" element={<DetailPanel />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => screen.getByText('Rick Sanchez'));
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/details/1']}>
+          <Routes>
+            <Route path="/details/:id" element={<DetailPanel />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 });

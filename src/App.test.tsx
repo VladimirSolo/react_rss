@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { ApiResponse } from './types';
 
@@ -32,11 +33,19 @@ function makeFetchOk(data: ApiResponse) {
   } as unknown as Response);
 }
 
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+}
+
 function renderApp(initialPath = '/?page=1') {
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <App />
-    </MemoryRouter>
+    <QueryClientProvider client={makeQueryClient()}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <App />
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
