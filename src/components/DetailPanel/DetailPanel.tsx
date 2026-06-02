@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Character } from '../../types';
+import { useCharacterQuery } from '../../hooks/useCharacterQuery';
 import Spinner from '../Spinner/Spinner';
-
-const API_BASE = 'https://rickandmortyapi.com/api/character';
 
 export default function DetailPanel(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -12,48 +9,8 @@ export default function DetailPanel(): JSX.Element {
 
   const page = searchParams.get('page') ?? '1';
 
-  const [character, setCharacter] = useState<Character | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!id) return;
-
-    const controller = new AbortController();
-
-    async function load() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        setCharacter(null);
-
-        const res = await fetch(`${API_BASE}/${id}`, {
-          signal: controller.signal,
-        });
-
-        if (!res.ok) {
-          throw new Error(`Request failed: ${res.status}`);
-        }
-
-        const data: Character = await res.json();
-        setCharacter(data);
-      } catch (err) {
-        if (controller.signal.aborted) return;
-
-        setError(
-          err instanceof Error ? err.message : 'An unexpected error occurred'
-        );
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    load();
-
-    return () => controller.abort();
-  }, [id]);
+  const { data: character, isLoading, isFetching, error, refresh } =
+    useCharacterQuery(id);
 
   const handleClose = (): void => {
     navigate(`/?page=${page}`);
@@ -61,13 +18,32 @@ export default function DetailPanel(): JSX.Element {
 
   return (
     <div className="detail-panel">
-      <button className="detail-close-btn" type="button" onClick={handleClose}>
-        ✕ Close
-      </button>
+      <div className="detail-header">
+        <button
+          className="detail-close-btn"
+          type="button"
+          onClick={handleClose}
+        >
+          ✕ Close
+        </button>
+        <button
+          className="refresh-btn"
+          type="button"
+          onClick={refresh}
+          disabled={isFetching}
+          aria-label="Refresh details"
+        >
+          {isFetching ? 'Refreshing…' : 'Refresh'}
+        </button>
+      </div>
 
       {isLoading && <Spinner />}
 
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div className="error-message">
+          {error instanceof Error ? error.message : 'An unexpected error occurred'}
+        </div>
+      )}
 
       {character && (
         <div className="detail-content">
