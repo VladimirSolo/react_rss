@@ -21,3 +21,14 @@ export interface ApiResponse {
   info: ApiInfo;
   results: Character[];
 }
+
+export interface FormSubmission {
+  id: string;
+  name: string;
+  age: number;
+  email: string;
+  gender: string;
+  country: string;
+  image: string;
+  submittedAt: number;
+}
