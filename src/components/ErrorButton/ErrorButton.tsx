@@ -1,6 +1,10 @@
-import { useState } from 'react';
+'use client';
 
-function ErrorButton(): JSX.Element {
+import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+
+function ErrorButton() {
+  const t = useTranslations('ErrorButton');
   const [shouldThrow, setShouldThrow] = useState(false);
 
   if (shouldThrow) {
@@ -13,7 +17,7 @@ function ErrorButton(): JSX.Element {
       type="button"
       onClick={() => setShouldThrow(true)}
     >
-      Throw Error
+      {t('label')}
     </button>
   );
 }

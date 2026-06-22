@@ -1,26 +1,35 @@
-import { NavLink } from 'react-router-dom';
-import { useTheme } from '../../hooks/useTheme';
+'use client';
 
-function Navigation(): JSX.Element {
+import { Suspense } from 'react';
+import { useTranslations } from 'next-intl';
+import { Link, usePathname } from '../../i18n/navigation';
+import { useTheme } from '../../hooks/useTheme';
+import LocaleSwitcher from '../LocaleSwitcher/LocaleSwitcher';
+
+function Navigation() {
+  const t = useTranslations('Navigation');
+  const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
 
   return (
     <nav className="nav">
-      <NavLink
-        to="/?page=1"
-        className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-        end
+      <Link
+        href="/"
+        className={`nav-link${pathname === '/' ? ' active' : ''}`}
       >
-        Home
-      </NavLink>
-      <NavLink
-        to="/about"
-        className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+        {t('home')}
+      </Link>
+      <Link
+        href="/about"
+        className={`nav-link${pathname === '/about' ? ' active' : ''}`}
       >
-        About
-      </NavLink>
+        {t('about')}
+      </Link>
+      <Suspense fallback={null}>
+        <LocaleSwitcher />
+      </Suspense>
       <button className="theme-toggle" type="button" onClick={toggleTheme}>
-        {theme === 'light' ? 'Dark mode' : 'Light mode'}
+        {theme === 'light' ? t('themeToDark') : t('themeToLight')}
       </button>
     </nav>
   );
