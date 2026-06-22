@@ -1,37 +1,56 @@
+import { getTranslations } from 'next-intl/server';
+import { Link } from '../../i18n/navigation';
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
-  onPageChange: (page: number) => void;
+  query: string;
+  basePath: string;
 }
 
-function Pagination({
+export default async function Pagination({
   currentPage,
   totalPages,
-  onPageChange,
-}: PaginationProps): JSX.Element {
+  query,
+  basePath,
+}: PaginationProps) {
+  const t = await getTranslations('Pagination');
+
+  const queryFor = (page: number): Record<string, string> =>
+    query ? { page: String(page), query } : { page: String(page) };
+
+  const prevDisabled = currentPage <= 1;
+  const nextDisabled = currentPage >= totalPages;
+
   return (
     <div className="pagination">
-      <button
-        className="pagination-btn"
-        type="button"
-        disabled={currentPage <= 1}
-        onClick={() => onPageChange(currentPage - 1)}
-      >
-        Prev
-      </button>
+      {prevDisabled ? (
+        <span className="pagination-btn pagination-btn--disabled">
+          {t('prev')}
+        </span>
+      ) : (
+        <Link
+          className="pagination-btn"
+          href={{ pathname: basePath, query: queryFor(currentPage - 1) }}
+        >
+          {t('prev')}
+        </Link>
+      )}
       <span className="pagination-info">
-        {currentPage} / {totalPages}
+        {t('pageInfo', { current: currentPage, total: totalPages })}
       </span>
-      <button
-        className="pagination-btn"
-        type="button"
-        disabled={currentPage >= totalPages}
-        onClick={() => onPageChange(currentPage + 1)}
-      >
-        Next
-      </button>
+      {nextDisabled ? (
+        <span className="pagination-btn pagination-btn--disabled">
+          {t('next')}
+        </span>
+      ) : (
+        <Link
+          className="pagination-btn"
+          href={{ pathname: basePath, query: queryFor(currentPage + 1) }}
+        >
+          {t('next')}
+        </Link>
+      )}
     </div>
   );
 }
-
-export default Pagination;

@@ -1,43 +1,28 @@
-import { ChangeEvent, useState } from 'react';
+import { getTranslations } from 'next-intl/server';
+import { searchAction } from '../../actions/search';
 
 interface SearchSectionProps {
-  initialValue: string;
-  onSearch: (term: string) => void;
+  initialQuery: string;
 }
 
-function SearchSection({
-  initialValue,
-  onSearch,
-}: SearchSectionProps): JSX.Element {
-  const [inputValue, setInputValue] = useState(initialValue);
-  const [lastSearched, setLastSearched] = useState(initialValue);
-
-  const handleChange = (event: ChangeEvent<HTMLInputElement>): void => {
-    setInputValue(event.target.value);
-  };
-
-  const handleSearch = (): void => {
-    const trimmed = inputValue.trim();
-    if (trimmed === lastSearched) return;
-    setLastSearched(trimmed);
-    onSearch(trimmed);
-  };
+export default async function SearchSection({
+  initialQuery,
+}: SearchSectionProps) {
+  const t = await getTranslations('Search');
 
   return (
-    <div className="search-section">
-      <h1>Rick &amp; Morty</h1>
+    <form className="search-section" action={searchAction}>
+      <h1>{t('title')}</h1>
       <input
         className="search-input"
         type="text"
-        value={inputValue}
-        onChange={handleChange}
-        placeholder="Search by character name..."
+        name="query"
+        defaultValue={initialQuery}
+        placeholder={t('placeholder')}
       />
-      <button className="search-btn" type="button" onClick={handleSearch}>
-        Search
+      <button className="search-btn" type="submit">
+        {t('button')}
       </button>
-    </div>
+    </form>
   );
 }
-
-export default SearchSection;

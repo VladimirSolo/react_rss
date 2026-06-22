@@ -5,11 +5,7 @@ interface CardListProps {
   items: Character[];
 }
 
-function CardList({ items }: CardListProps): JSX.Element {
-  if (items.length === 0) {
-    return <p className="no-results">No characters found.</p>;
-  }
-
+function CardList({ items }: CardListProps) {
   return (
     <div className="card-list">
       {items.map((item) => (
