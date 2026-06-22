@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import Flyout from './Flyout';
 import { useSelectionStore } from '../../store/selectionStore';
 import { Character } from '../../types';
@@ -57,11 +57,20 @@ describe('Flyout', () => {
     expect(screen.getByText('2 items selected')).toBeInTheDocument();
   });
 
-  it('renders Unselect all and Download buttons', () => {
+  it('renders Unselect all button and a Download link', () => {
     useSelectionStore.setState({ selectedItems: { 1: rick } });
     render(<Flyout />);
     expect(screen.getByRole('button', { name: 'Unselect all' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Download' })).toBeInTheDocument();
+  });
+
+  it('Download link points to the CSV route handler with selected ids', () => {
+    useSelectionStore.setState({ selectedItems: { 1: rick, 2: morty } });
+    render(<Flyout />);
+    expect(screen.getByRole('link', { name: 'Download' })).toHaveAttribute(
+      'href',
+      '/api/csv?ids=1,2'
+    );
   });
 
   it('clears selection when Unselect all is clicked', async () => {
@@ -70,35 +79,6 @@ describe('Flyout', () => {
     render(<Flyout />);
     await user.click(screen.getByRole('button', { name: 'Unselect all' }));
     expect(useSelectionStore.getState().selectedItems).toEqual({});
-  });
-
-  it('triggers CSV download when Download is clicked', async () => {
-    const user = userEvent.setup();
-    useSelectionStore.setState({ selectedItems: { 1: rick } });
-
-    const mockCreateURL = vi.fn().mockReturnValue('blob:mock');
-    const mockRevokeURL = vi.fn();
-    vi.spyOn(URL, 'createObjectURL').mockImplementation(mockCreateURL);
-    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(mockRevokeURL);
-
-    const mockAnchorClick = vi.fn();
-    const originalCreateElement = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-      const el = originalCreateElement(tag);
-      if (tag === 'a') {
-        (el as HTMLAnchorElement).click = mockAnchorClick;
-      }
-      return el;
-    });
-
-    render(<Flyout />);
-    await user.click(screen.getByRole('button', { name: 'Download' }));
-
-    expect(mockCreateURL).toHaveBeenCalled();
-    expect(mockAnchorClick).toHaveBeenCalled();
-    expect(mockRevokeURL).toHaveBeenCalled();
-
-    vi.restoreAllMocks();
   });
 
   it('disappears after unselecting all items', async () => {

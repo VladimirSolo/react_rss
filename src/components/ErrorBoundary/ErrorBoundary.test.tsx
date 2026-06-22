@@ -2,11 +2,11 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ErrorBoundary from './ErrorBoundary';
 
-function BrokenChild(): JSX.Element {
+function BrokenChild() {
   throw new Error('Test error from child');
 }
 
-function GoodChild(): JSX.Element {
+function GoodChild() {
   return <div>Good content</div>;
 }
 
@@ -69,7 +69,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('shows fallback with generic message for errors without message', () => {
-    function NoMessageError(): JSX.Element {
+    function NoMessageError() {
       throw new Error('');
     }
     render(

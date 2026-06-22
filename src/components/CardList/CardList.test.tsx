@@ -1,8 +1,26 @@
+import { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, vi } from 'vitest';
 import CardList from './CardList';
 import { Character } from '../../types';
+
+type LinkProps = {
+  href: string | { pathname: string; query?: Record<string, string> };
+  children: ReactNode;
+  className?: string;
+};
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+vi.mock('../../i18n/navigation', () => ({
+  Link: ({ href, children, className }: LinkProps) => (
+    <a href={typeof href === 'string' ? href : href.pathname} className={className}>
+      {children}
+    </a>
+  ),
+}));
 
 const mockItems: Character[] = [
   {
@@ -41,43 +59,26 @@ const mockItems: Character[] = [
 ];
 
 describe('CardList', () => {
-  it('shows "no results" message when items array is empty', () => {
-    render(
-      <MemoryRouter>
-        <CardList items={[]} />
-      </MemoryRouter>
-    );
-    expect(screen.getByText('No characters found.')).toBeInTheDocument();
-  });
-
   it('renders correct number of cards when items are provided', () => {
-    render(
-      <MemoryRouter>
-        <CardList items={mockItems} />
-      </MemoryRouter>
-    );
+    render(<CardList items={mockItems} />);
     expect(screen.getByText('Rick Sanchez')).toBeInTheDocument();
     expect(screen.getByText('Morty Smith')).toBeInTheDocument();
     expect(screen.getByText('Summer Smith')).toBeInTheDocument();
   });
 
   it('renders card-list container when items exist', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <CardList items={mockItems} />
-      </MemoryRouter>
-    );
+    const { container } = render(<CardList items={mockItems} />);
     expect(container.querySelector('.card-list')).toBeInTheDocument();
   });
 
   it('renders single item correctly', () => {
     const single = [mockItems[0]];
-    render(
-      <MemoryRouter>
-        <CardList items={single} />
-      </MemoryRouter>
-    );
+    render(<CardList items={single} />);
     expect(screen.getByText('Rick Sanchez')).toBeInTheDocument();
-    expect(screen.queryByText('No characters found.')).not.toBeInTheDocument();
+  });
+
+  it('renders an empty container when items array is empty', () => {
+    const { container } = render(<CardList items={[]} />);
+    expect(container.querySelector('.card-list')?.children.length).toBe(0);
   });
 });

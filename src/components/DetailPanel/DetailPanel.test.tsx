@@ -1,12 +1,37 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactNode } from 'react';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DetailPanel from './DetailPanel';
 import { Character } from '../../types';
 
-const mockCharacter: Character = {
+type LinkProps = {
+  href: string | { pathname: string; query?: Record<string, string> };
+  children: ReactNode;
+  className?: string;
+};
+
+const getCharacter = vi.fn();
+
+vi.mock('../../lib/api', () => ({
+  getCharacter: (id: string) => getCharacter(id),
+}));
+
+vi.mock('../../i18n/navigation', () => ({
+  Link: ({ href, children, className }: LinkProps) => {
+    const resolved =
+      typeof href === 'string'
+        ? href
+        : `${href.pathname}?${new URLSearchParams(href.query).toString()}`;
+    return (
+      <a href={resolved} className={className}>
+        {children}
+      </a>
+    );
+  },
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
+const rick: Character = {
   id: 1,
   name: 'Rick Sanchez',
   status: 'Alive',
@@ -18,187 +43,64 @@ const mockCharacter: Character = {
   image: 'https://example.com/rick.png',
 };
 
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-    },
-  });
+interface RenderProps {
+  id?: string;
+  page?: number;
+  query?: string;
 }
 
-function renderDetailPanel(id = '1', page = '1', queryClient = makeQueryClient()) {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[`/details/${id}?page=${page}`]}>
-        <Routes>
-          <Route path="/details/:id" element={<DetailPanel />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>
-  );
+async function renderDetailPanel({
+  id = '1',
+  page = 1,
+  query = '',
+}: RenderProps) {
+  const jsx = await DetailPanel({ id, page, query });
+  return render(jsx);
 }
 
 describe('DetailPanel', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    getCharacter.mockReset();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it('renders character details after a successful fetch', async () => {
+    getCharacter.mockResolvedValue(rick);
+    await renderDetailPanel({});
+    expect(screen.getByText('Rick Sanchez')).toBeInTheDocument();
+    expect(screen.getByText(/Earth \(C-137\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Citadel of Ricks/)).toBeInTheDocument();
+    expect(screen.getByText(/Male/)).toBeInTheDocument();
   });
 
-  it('shows spinner while loading', () => {
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
-    renderDetailPanel();
-    expect(document.querySelector('.spinner')).toBeInTheDocument();
+  it('shows a not-found message when the character does not exist', async () => {
+    getCharacter.mockResolvedValue(null);
+    await renderDetailPanel({});
+    expect(screen.getByText('Character not found.')).toBeInTheDocument();
   });
 
-  it('renders character details after successful fetch', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(mockCharacter),
-    } as unknown as Response);
-
-    renderDetailPanel();
-    await waitFor(() => {
-      expect(screen.getByText('Rick Sanchez')).toBeInTheDocument();
-      expect(screen.getByText(/Earth \(C-137\)/)).toBeInTheDocument();
-      expect(screen.getByText(/Citadel of Ricks/)).toBeInTheDocument();
-      expect(screen.getByText(/Male/)).toBeInTheDocument();
-    });
+  it('shows an error message when the fetch fails', async () => {
+    getCharacter.mockRejectedValue(new Error('Network error'));
+    await renderDetailPanel({});
+    expect(screen.getByText('Network error')).toBeInTheDocument();
   });
 
-  it('shows error message when fetch fails', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-    } as unknown as Response);
-
-    renderDetailPanel();
-    await waitFor(() => {
-      expect(screen.getByText(/Request failed: 404/)).toBeInTheDocument();
-    });
+  it('renders the close link back to the list, preserving page and query', async () => {
+    getCharacter.mockResolvedValue(rick);
+    await renderDetailPanel({ page: 2, query: 'rick' });
+    const close = screen.getByRole('link', { name: /Close/ });
+    expect(close.getAttribute('href')).toContain('page=2');
+    expect(close.getAttribute('href')).toContain('query=rick');
   });
 
-  it('handles network error gracefully', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
-    renderDetailPanel();
-    await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
-    });
+  it('renders a refresh button', async () => {
+    getCharacter.mockResolvedValue(rick);
+    await renderDetailPanel({});
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
   });
 
-  it('handles unknown error type gracefully', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue('fail');
-    renderDetailPanel();
-    await waitFor(() => {
-      expect(screen.getByText('An unexpected error occurred')).toBeInTheDocument();
-    });
-  });
-
-  it('renders close button', async () => {
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
-    renderDetailPanel();
-    expect(screen.getByRole('button', { name: /Close/ })).toBeInTheDocument();
-  });
-
-  it('renders refresh button', async () => {
-    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
-    renderDetailPanel();
-    expect(
-      screen.getByRole('button', { name: /Refresh details/i })
-    ).toBeInTheDocument();
-  });
-
-  it('navigates back on close button click', async () => {
-    const user = userEvent.setup();
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(mockCharacter),
-    } as unknown as Response);
-
-    render(
-      <QueryClientProvider client={makeQueryClient()}>
-        <MemoryRouter initialEntries={['/details/1?page=2']}>
-          <Routes>
-            <Route path="/" element={<div>Main Page</div>} />
-            <Route path="/details/:id" element={<DetailPanel />} />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>
-    );
-
-    await waitFor(() => screen.getByText('Rick Sanchez'));
-    await user.click(screen.getByRole('button', { name: /Close/ }));
-    expect(screen.getByText('Main Page')).toBeInTheDocument();
-  });
-
-  it('displays character image', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(mockCharacter),
-    } as unknown as Response);
-
-    renderDetailPanel();
-    await waitFor(() => {
-      const img = screen.getByRole('img', { name: 'Rick Sanchez' });
-      expect(img).toBeInTheDocument();
-      expect(img).toHaveAttribute('src', 'https://example.com/rick.png');
-    });
-  });
-
-  it('invalidates cache and refetches when refresh button is clicked', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(mockCharacter),
-    } as unknown as Response);
-
-    renderDetailPanel();
-    await waitFor(() => screen.getByText('Rick Sanchez'));
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /Refresh details/i }));
-
-    await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  it('caches data — does not refetch for same id', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(mockCharacter),
-    } as unknown as Response);
-
-    const queryClient = makeQueryClient();
-    const { rerender } = render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/details/1']}>
-          <Routes>
-            <Route path="/details/:id" element={<DetailPanel />} />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>
-    );
-
-    await waitFor(() => screen.getByText('Rick Sanchez'));
-
-    rerender(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/details/1']}>
-          <Routes>
-            <Route path="/details/:id" element={<DetailPanel />} />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>
-    );
-
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  it('renders the character image', async () => {
+    getCharacter.mockResolvedValue(rick);
+    await renderDetailPanel({});
+    expect(screen.getByRole('img', { name: 'Rick Sanchez' })).toBeInTheDocument();
   });
 });

@@ -1,0 +1,71 @@
+{
+  "Metadata": {
+    "title": "Рик и Морти: Исследователь",
+    "description": "Поиск и изучение персонажей Рика и Морти."
+  },
+  "Navigation": {
+    "home": "Главная",
+    "about": "О проекте",
+    "themeToDark": "Тёмная тема",
+    "themeToLight": "Светлая тема"
+  },
+  "LocaleSwitcher": {
+    "label": "Язык",
+    "en": "English",
+    "ru": "Русский"
+  },
+  "Search": {
+    "title": "Рик и Морти",
+    "placeholder": "Поиск персонажа по имени...",
+    "button": "Поиск"
+  },
+  "Results": {
+    "empty": "Персонажи не найдены.",
+    "refresh": "Обновить",
+    "refreshing": "Обновление…",
+    "error": "Непредвиденная ошибка",
+    "selectAria": "Выбрать {name}"
+  },
+  "Pagination": {
+    "prev": "Назад",
+    "next": "Далее",
+    "pageInfo": "{current} / {total}"
+  },
+  "Detail": {
+    "close": "✕ Закрыть",
+    "refresh": "Обновить",
+    "refreshing": "Обновление…",
+    "status": "Статус",
+    "species": "Вид",
+    "gender": "Пол",
+    "origin": "Происхождение",
+    "location": "Локация",
+    "error": "Произошла непредвиденная ошибка",
+    "notFound": "Персонаж не найден."
+  },
+  "Flyout": {
+    "count": "{count, plural, one {Выбран # элемент} few {Выбрано # элемента} many {Выбрано # элементов} other {Выбрано # элемента}}",
+    "unselectAll": "Снять выбор",
+    "download": "Скачать"
+  },
+  "About": {
+    "heading": "О проекте",
+    "intro": "Это приложение было создано в рамках <link>курса RS School по React</link>.",
+    "authorLabel": "Автор:",
+    "apiText": "Приложение использует <link>Rick & Morty API</link> для отображения персонажей с поиском и пагинацией.",
+    "back": "← Назад на главную"
+  },
+  "NotFound": {
+    "heading": "404 — Страница не найдена",
+    "text": "Страница, которую вы ищете, не существует.",
+    "back": "← Вернуться на главную"
+  },
+  "ErrorBoundary": {
+    "heading": "Что-то пошло не так",
+    "fallback": "Произошла непредвиденная ошибка.",
+    "tryAgain": "Попробовать снова"
+  },
+  "ErrorButton": {
+    "label": "Вызвать ошибку"
+  }
+}

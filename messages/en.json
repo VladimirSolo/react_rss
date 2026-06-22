@@ -1,0 +1,71 @@
+{
+  "Metadata": {
+    "title": "Rick & Morty Explorer",
+    "description": "Search and explore Rick & Morty characters."
+  },
+  "Navigation": {
+    "home": "Home",
+    "about": "About",
+    "themeToDark": "Dark mode",
+    "themeToLight": "Light mode"
+  },
+  "LocaleSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "ru": "Русский"
+  },
+  "Search": {
+    "title": "Rick & Morty",
+    "placeholder": "Search by character name...",
+    "button": "Search"
+  },
+  "Results": {
+    "empty": "No characters found.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "error": "Unexpected error",
+    "selectAria": "Select {name}"
+  },
+  "Pagination": {
+    "prev": "Prev",
+    "next": "Next",
+    "pageInfo": "{current} / {total}"
+  },
+  "Detail": {
+    "close": "✕ Close",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "status": "Status",
+    "species": "Species",
+    "gender": "Gender",
+    "origin": "Origin",
+    "location": "Location",
+    "error": "An unexpected error occurred",
+    "notFound": "Character not found."
+  },
+  "Flyout": {
+    "count": "{count, plural, one {# item selected} other {# items selected}}",
+    "unselectAll": "Unselect all",
+    "download": "Download"
+  },
+  "About": {
+    "heading": "About",
+    "intro": "This application was built as part of the <link>RS School React course</link>.",
+    "authorLabel": "Author:",
+    "apiText": "It uses the <link>Rick & Morty API</link> to display characters with search and pagination.",
+    "back": "← Back to main page"
+  },
+  "NotFound": {
+    "heading": "404 — Page Not Found",
+    "text": "The page you are looking for does not exist.",
+    "back": "← Return to main page"
+  },
+  "ErrorBoundary": {
+    "heading": "Something went wrong",
+    "fallback": "An unexpected error occurred.",
+    "tryAgain": "Try again"
+  },
+  "ErrorButton": {
+    "label": "Throw Error"
+  }
+}
