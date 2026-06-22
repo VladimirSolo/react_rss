@@ -1,10 +1,28 @@
+import { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, beforeEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Card from './Card';
 import { Character } from '../../types';
 import { useSelectionStore } from '../../store/selectionStore';
+
+type LinkProps = {
+  href: string | { pathname: string; query?: Record<string, string> };
+  children: ReactNode;
+  className?: string;
+};
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams('page=1'),
+}));
+
+vi.mock('../../i18n/navigation', () => ({
+  Link: ({ href, children, className }: LinkProps) => (
+    <a href={typeof href === 'string' ? href : href.pathname} className={className}>
+      {children}
+    </a>
+  ),
+}));
 
 const mockCharacter: Character = {
   id: 1,
@@ -36,69 +54,41 @@ beforeEach(() => {
 
 describe('Card', () => {
   it('displays character name', () => {
-    render(
-      <MemoryRouter>
-        <Card item={mockCharacter} />
-      </MemoryRouter>
-    );
+    render(<Card item={mockCharacter} />);
     expect(screen.getByText('Rick Sanchez')).toBeInTheDocument();
   });
 
   it('displays character status and species', () => {
-    render(
-      <MemoryRouter>
-        <Card item={mockCharacter} />
-      </MemoryRouter>
-    );
+    render(<Card item={mockCharacter} />);
     expect(screen.getByText(/Alive/)).toBeInTheDocument();
     expect(screen.getByText(/Human/)).toBeInTheDocument();
   });
 
   it('renders card container with correct class', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <Card item={mockCharacter} />
-      </MemoryRouter>
-    );
+    const { container } = render(<Card item={mockCharacter} />);
     expect(container.querySelector('.card')).toBeInTheDocument();
   });
 
   it('displays different character data correctly', () => {
-    render(
-      <MemoryRouter>
-        <Card item={morty} />
-      </MemoryRouter>
-    );
+    render(<Card item={morty} />);
     expect(screen.getByText('Morty Smith')).toBeInTheDocument();
   });
 
   it('renders a checkbox for selection', () => {
-    render(
-      <MemoryRouter>
-        <Card item={mockCharacter} />
-      </MemoryRouter>
-    );
+    render(<Card item={mockCharacter} />);
     expect(
       screen.getByRole('checkbox', { name: /Select Rick Sanchez/i })
     ).toBeInTheDocument();
   });
 
   it('checkbox is unchecked by default', () => {
-    render(
-      <MemoryRouter>
-        <Card item={mockCharacter} />
-      </MemoryRouter>
-    );
+    render(<Card item={mockCharacter} />);
     expect(screen.getByRole('checkbox')).not.toBeChecked();
   });
 
   it('clicking checkbox selects the item', async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <Card item={mockCharacter} />
-      </MemoryRouter>
-    );
+    render(<Card item={mockCharacter} />);
     const checkbox = screen.getByRole('checkbox');
     await user.click(checkbox);
     expect(checkbox).toBeChecked();
@@ -107,11 +97,7 @@ describe('Card', () => {
 
   it('clicking checkbox again deselects the item', async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <Card item={mockCharacter} />
-      </MemoryRouter>
-    );
+    render(<Card item={mockCharacter} />);
     const checkbox = screen.getByRole('checkbox');
     await user.click(checkbox);
     await user.click(checkbox);
@@ -121,31 +107,19 @@ describe('Card', () => {
 
   it('adds card--selected class when item is selected', async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <MemoryRouter>
-        <Card item={mockCharacter} />
-      </MemoryRouter>
-    );
+    const { container } = render(<Card item={mockCharacter} />);
     await user.click(screen.getByRole('checkbox'));
     expect(container.querySelector('.card--selected')).toBeInTheDocument();
   });
 
   it('reflects pre-existing selection state from store', () => {
     useSelectionStore.setState({ selectedItems: { 1: mockCharacter } });
-    render(
-      <MemoryRouter>
-        <Card item={mockCharacter} />
-      </MemoryRouter>
-    );
+    render(<Card item={mockCharacter} />);
     expect(screen.getByRole('checkbox')).toBeChecked();
   });
 
   it('does not add card--selected class when item is not selected', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <Card item={mockCharacter} />
-      </MemoryRouter>
-    );
+    const { container } = render(<Card item={mockCharacter} />);
     expect(container.querySelector('.card--selected')).not.toBeInTheDocument();
   });
 });

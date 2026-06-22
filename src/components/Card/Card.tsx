@@ -1,4 +1,9 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+'use client';
+
+import { MouseEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { Link } from '../../i18n/navigation';
 import { Character } from '../../types';
 import { useSelectionStore } from '../../store/selectionStore';
 
@@ -6,19 +11,14 @@ interface CardProps {
   item: Character;
 }
 
-function Card({ item }: CardProps): JSX.Element {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const page = searchParams.get('page') ?? '1';
+function Card({ item }: CardProps) {
+  const t = useTranslations('Results');
+  const searchParams = useSearchParams();
   const { selectedItems, toggle } = useSelectionStore();
   const isSelected = Boolean(selectedItems[item.id]);
+  const search = searchParams.toString();
 
-  const handleCardClick = (e: React.MouseEvent): void => {
-    e.stopPropagation();
-    navigate(`/details/${item.id}?page=${page}`);
-  };
-
-  const handleCheckboxClick = (e: React.MouseEvent): void => {
+  const handleCheckboxClick = (e: MouseEvent): void => {
     e.stopPropagation();
   };
 
@@ -27,14 +27,9 @@ function Card({ item }: CardProps): JSX.Element {
   };
 
   return (
-    <div
+    <Link
+      href={`/details/${item.id}${search ? `?${search}` : ''}`}
       className={`card${isSelected ? ' card--selected' : ''}`}
-      onClick={handleCardClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) =>
-        e.key === 'Enter' && handleCardClick(e as unknown as React.MouseEvent)
-      }
     >
       <input
         type="checkbox"
@@ -42,13 +37,13 @@ function Card({ item }: CardProps): JSX.Element {
         checked={isSelected}
         onChange={handleCheckboxChange}
         onClick={handleCheckboxClick}
-        aria-label={`Select ${item.name}`}
+        aria-label={t('selectAria', { name: item.name })}
       />
       <h3 className="card-name">{item.name}</h3>
       <p className="card-description">
         {item.status} &mdash; {item.species}
       </p>
-    </div>
+    </Link>
   );
 }
 

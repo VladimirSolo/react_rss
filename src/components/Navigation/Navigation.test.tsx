@@ -1,17 +1,35 @@
+import { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, vi } from 'vitest';
 import Navigation from './Navigation';
 import { ThemeProvider } from '../../contexts/ThemeProvider';
 
+type LinkProps = {
+  href: string | { pathname: string; query?: Record<string, string> };
+  children: ReactNode;
+  className?: string;
+};
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+vi.mock('../../i18n/navigation', () => ({
+  Link: ({ href, children, className }: LinkProps) => (
+    <a href={typeof href === 'string' ? href : href.pathname} className={className}>
+      {children}
+    </a>
+  ),
+  usePathname: () => '/',
+  useRouter: () => ({ replace: vi.fn() }),
+}));
+
 function renderNav() {
   return render(
-    <MemoryRouter>
-      <ThemeProvider>
-        <Navigation />
-      </ThemeProvider>
-    </MemoryRouter>
+    <ThemeProvider>
+      <Navigation />
+    </ThemeProvider>
   );
 }
 
@@ -32,6 +50,12 @@ describe('Navigation', () => {
       'href',
       '/about'
     );
+  });
+
+  it('renders the locale switcher', () => {
+    renderNav();
+    expect(screen.getByRole('button', { name: 'English' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Русский' })).toBeInTheDocument();
   });
 
   it('renders theme toggle button', () => {

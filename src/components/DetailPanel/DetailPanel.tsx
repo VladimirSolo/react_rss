@@ -1,75 +1,81 @@
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useCharacterQuery } from '../../hooks/useCharacterQuery';
-import Spinner from '../Spinner/Spinner';
+import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
+import { getCharacter } from '../../lib/api';
+import { Link } from '../../i18n/navigation';
+import RefreshButton from '../RefreshButton/RefreshButton';
 
-export default function DetailPanel(): JSX.Element {
-  const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+interface DetailPanelProps {
+  id: string;
+  page: number;
+  query: string;
+}
 
-  const page = searchParams.get('page') ?? '1';
+export default async function DetailPanel({
+  id,
+  page,
+  query,
+}: DetailPanelProps) {
+  const t = await getTranslations('Detail');
 
-  const { data: character, isLoading, isFetching, error, refresh } =
-    useCharacterQuery(id);
+  const closeQuery: Record<string, string> = query
+    ? { page: String(page), query }
+    : { page: String(page) };
 
-  const handleClose = (): void => {
-    navigate(`/?page=${page}`);
-  };
+  let errorMessage: string | null = null;
+  let character: Awaited<ReturnType<typeof getCharacter>> = null;
+
+  try {
+    character = await getCharacter(id);
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : t('error');
+  }
 
   return (
     <div className="detail-panel">
       <div className="detail-header">
-        <button
-          className="detail-close-btn"
-          type="button"
-          onClick={handleClose}
-        >
-          ✕ Close
-        </button>
-        <button
-          className="refresh-btn"
-          type="button"
-          onClick={refresh}
-          disabled={isFetching}
-          aria-label="Refresh details"
-        >
-          {isFetching ? 'Refreshing…' : 'Refresh'}
-        </button>
+        <Link href={{ pathname: '/', query: closeQuery }} className="detail-close-btn">
+          {t('close')}
+        </Link>
+        <RefreshButton
+          label={t('refresh')}
+          refreshingLabel={t('refreshing')}
+          ariaLabel={t('refresh')}
+        />
       </div>
 
-      {isLoading && <Spinner />}
+      {errorMessage && <div className="error-message">{errorMessage}</div>}
 
-      {error && (
-        <div className="error-message">
-          {error instanceof Error ? error.message : 'An unexpected error occurred'}
-        </div>
+      {!errorMessage && !character && (
+        <div className="error-message">{t('notFound')}</div>
       )}
 
       {character && (
         <div className="detail-content">
-          <img
+          <Image
             className="detail-image"
             src={character.image}
             alt={character.name}
+            width={300}
+            height={300}
           />
 
           <h2 className="detail-name">{character.name}</h2>
 
           <ul className="detail-info">
             <li>
-              <strong>Status:</strong> {character.status}
+              <strong>{t('status')}:</strong> {character.status}
             </li>
             <li>
-              <strong>Species:</strong> {character.species}
+              <strong>{t('species')}:</strong> {character.species}
             </li>
             <li>
-              <strong>Gender:</strong> {character.gender}
+              <strong>{t('gender')}:</strong> {character.gender}
             </li>
             <li>
-              <strong>Origin:</strong> {character.origin.name}
+              <strong>{t('origin')}:</strong> {character.origin.name}
             </li>
             <li>
-              <strong>Location:</strong> {character.location.name}
+              <strong>{t('location')}:</strong> {character.location.name}
             </li>
           </ul>
         </div>

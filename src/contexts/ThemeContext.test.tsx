@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { ThemeProvider } from './ThemeProvider';
 import { useTheme } from '../hooks/useTheme';
 
-function ThemeConsumer(): JSX.Element {
+function ThemeConsumer() {
   const { theme, toggleTheme } = useTheme();
   return (
     <>

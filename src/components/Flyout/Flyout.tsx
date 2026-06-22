@@ -1,63 +1,30 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { useSelectionStore } from '../../store/selectionStore';
-import { Character } from '../../types';
 
-function generateCSV(items: Character[]): string {
-  const headers = [
-    'ID',
-    'Name',
-    'Status',
-    'Species',
-    'Gender',
-    'Origin',
-    'Location',
-    'URL',
-  ];
-  const rows = items.map((item) => [
-    item.id,
-    item.name,
-    item.status,
-    item.species,
-    item.gender,
-    item.origin.name,
-    item.location.name,
-    `https://rickandmortyapi.com/api/character/${item.id}`,
-  ]);
-  return [headers, ...rows].map((row) => row.join(',')).join('\n');
-}
-
-export default function Flyout(): JSX.Element | null {
+export default function Flyout() {
+  const t = useTranslations('Flyout');
   const { selectedItems, unselectAll } = useSelectionStore();
   const items = Object.values(selectedItems);
   const count = items.length;
 
   if (count === 0) return null;
 
-  const handleDownload = (): void => {
-    const csv = generateCSV(items);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${count}_items.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const ids = items.map((item) => item.id).join(',');
 
   return (
     <div className="flyout" role="region" aria-label="selected items">
-      <span className="flyout-count">
-        {count} item{count !== 1 ? 's' : ''} selected
-      </span>
+      <span className="flyout-count">{t('count', { count })}</span>
       <button className="flyout-btn" type="button" onClick={unselectAll}>
-        Unselect all
+        {t('unselectAll')}
       </button>
-      <button
+      <a
         className="flyout-btn flyout-btn--download"
-        type="button"
-        onClick={handleDownload}
+        href={`/api/csv?ids=${ids}`}
       >
-        Download
-      </button>
+        {t('download')}
+      </a>
     </div>
   );
 }
