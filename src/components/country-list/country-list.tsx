@@ -56,26 +56,25 @@ export const CountryList = memo(
     sortField,
     sortOrder,
   }: CountryListProps) => {
-    const filteredCountries = useMemo(
-      () =>
-        countries
-          .filter((c) => {
-            const matchesSearch = c.id.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesRegion =
-              !selectedRegion || c.data.some((d) => d.region === selectedRegion);
-            return matchesSearch && matchesRegion;
-          })
-          .sort((a, b) => {
-            if (sortField === 'name') {
-              return sortOrder === 'asc' ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
-            } else {
-              const popA = getPopulationForYear(createYearDataMap(a.data), selectedYear) || 0;
-              const popB = getPopulationForYear(createYearDataMap(b.data), selectedYear) || 0;
-              return sortOrder === 'asc' ? popA - popB : popB - popA;
-            }
-          }),
-      [countries, searchQuery, selectedRegion, selectedYear, sortField, sortOrder]
-    );
+    const filteredCountries = useMemo(() => {
+      const normalizedQuery = searchQuery.toLowerCase().trim();
+
+      return countries
+        .filter((c) => {
+          const matchesSearch = c.id.toLowerCase().includes(normalizedQuery);
+          const matchesRegion = !selectedRegion || c.data.some((d) => d.region === selectedRegion);
+          return matchesSearch && matchesRegion;
+        })
+        .sort((a, b) => {
+          if (sortField === 'name') {
+            return sortOrder === 'asc' ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+          } else {
+            const popA = getPopulationForYear(createYearDataMap(a.data), selectedYear) || 0;
+            const popB = getPopulationForYear(createYearDataMap(b.data), selectedYear) || 0;
+            return sortOrder === 'asc' ? popA - popB : popB - popA;
+          }
+        });
+    }, [countries, searchQuery, selectedRegion, selectedYear, sortField, sortOrder]);
 
     const itemSize = ITEM_BASE_HEIGHT + selectedColumns.length * ROW_HEIGHT;
 
