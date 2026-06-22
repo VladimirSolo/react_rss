@@ -106,24 +106,28 @@ Profiling was conducted in **development mode** using React DevTools Profiler wi
 
 ### `useMemo`
 - **`App`**: `years` array memoized — `getAvailableYears` traverses all data, runs once when data loads
-- **`App`**: `availableColumns` memoized — stable array reference prevents child re-renders
 - **`CountryList`**: `filteredCountries` memoized — expensive filter+sort runs only when its 6 dependencies change
-- **`CountryCard`**: `yearDataMap` memoized — Map creation happens once per country data change
-- **`CountryCard`**: `population` and `co2` memoized — depend on the stable `yearDataMap`
-- **`DataTable`**: `record` memoized — `Array.find` runs only when `data` or `year` changes
+- **`CountryCard`**: `yearDataMap` memoized — `createYearDataMap` is O(n) over a country's year records, runs once per `country.data` change rather than on every `selectedYear` change
+
+**Removed during refinement (added overhead without benefit):**
+- **`App`**: `availableColumns` — moved into `ColumnModal` itself, computed only while the modal is open. It never depended on any `App` state, so memoizing it in `App` and threading it through a prop was pure overhead.
+- **`CountryCard`**: `population`/`co2` — these were just `Map.get()` lookups (O(1)) against the already-memoized `yearDataMap`. Wrapping an O(1) lookup in `useMemo` costs more (dependency array, comparison, hook bookkeeping) than the lookup itself.
+- **`DataTable`**: `record` — `Array.find()` was redoing work `CountryCard` already did via `createYearDataMap`. Now `CountryCard` does a single `yearDataMap.get(selectedYear)` and passes the resulting `record` straight down as a prop, so `DataTable` needs no lookup or memoization at all.
 
 ### `useCallback`
-All App event handlers (`handleSearch`, `handleYearChange`, `handleSortFieldChange`, `handleSortOrderToggle`, `handleColumnToggle`, `handleModalToggle`) wrapped in `useCallback` with correct dependencies. Handler functions now have stable references between renders, so memoized children that receive them as props skip re-renders.
+`handleSearch`, `handleYearChange`, `handleColumnToggle`, `handleModalToggle` are wrapped in `useCallback` because they're passed directly as props to memoized children (`SearchBar`, `YearSelector`, `CountryList`, `ColumnModal`) — stable references let those children skip re-renders.
 
-State updaters use the functional form `setState((prev) => ...)` to avoid capturing stale state in the `useCallback` closure — no dependency on `state` variable needed.
+`handleSortFieldChange` and `handleSortOrderToggle` are plain functions (no `useCallback`). They're only invoked from inline handlers on native DOM elements (`<select>`, `<button>`) inside `App` itself and are never passed to a memoized child, so there was no stable-reference payoff to justify the hook.
+
+State updaters use the functional form `setState((prev) => ...)` to avoid capturing stale state in closures — no dependency on the `state` variable needed.
 
 ### `React.memo`
 - `CountryList` — skips re-render when sort/search/year haven't changed
 - `CountryCard` — skips re-render when its `country`, `selectedYear`, and `selectedColumns` haven't changed
-- `DataTable` — skips re-render when `data`, `year`, `columns` are unchanged
+- `DataTable` — skips re-render when `record`, `year`, `columns` are unchanged
 - `SearchBar` — skips re-render on unrelated state changes (e.g., column modal open/close)
 - `YearSelector` — same
-- `ColumnModal` — only re-renders when `isOpen`, `selectedColumns`, or `availableColumns` change
+- `ColumnModal` — only re-renders when `isOpen` or `selectedColumns` change; computes its own `availableColumns` internally (static list, no dependency on `App` state)
 
 ### Proper Key Props
 - **`CountryList`**: `key={country.id}` instead of `key={index}` — React correctly identifies items during sort, reusing existing DOM nodes instead of unmounting/remounting all cards
@@ -173,7 +177,7 @@ Implemented with **`react-window`** `List` component in `CountryList`:
 | Commit duration | ~900 ms | ~50 ms | **94% faster** |
 | Render duration | ~870 ms | ~45 ms | **95% faster** |
 
-**After:** Only visible `CountryCard` items re-render. `yearDataMap` is already cached per card via `useMemo`; only `population` and `co2` recompute (trivial Map lookups).
+**After:** Only visible `CountryCard` items re-render. `yearDataMap` is already cached per card via `useMemo`; `population`, `co2`, and `record` are read directly off it with plain `Map.get()` calls — no `useMemo` needed for an O(1) lookup.
 
 ![Optimized year change flame chart](docs/optimized-year.png)
 
@@ -209,3 +213,4 @@ Implemented with **`react-window`** `List` component in `CountryList`:
 3. **`useCallback`** + **functional state updates** made memoized components actually skip renders (stable prop references)
 4. **`useMemo`** for `filteredCountries` eliminated redundant O(n log n) sort operations on every keystroke
 5. **Proper keys** eliminated unnecessary unmount/remount cycles during sorting
+6. **Memoization isn't free** — a follow-up pass removed `useMemo`/`useCallback` from values that were either O(1) lookups (`population`, `co2`, `availableColumns`) or never passed to a memoized child (`handleSortFieldChange`, `handleSortOrderToggle`). The hook bookkeeping cost more than the work it was guarding

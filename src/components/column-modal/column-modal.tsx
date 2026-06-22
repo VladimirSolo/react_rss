@@ -1,19 +1,21 @@
 import { memo } from 'react';
+import { getAvailableColumns } from '../../utils/data-transformers';
 import styles from './column-modal.module.css';
 
 type ColumnModalProps = {
   isOpen: boolean;
-  availableColumns: string[];
   selectedColumns: string[];
   onToggle: (column: string) => void;
   onClose: () => void;
 };
 
 export const ColumnModal = memo(
-  ({ isOpen, availableColumns, selectedColumns, onToggle, onClose }: ColumnModalProps) => {
+  ({ isOpen, selectedColumns, onToggle, onClose }: ColumnModalProps) => {
     if (!isOpen) {
       return null;
     }
+
+    const availableColumns = getAvailableColumns();
 
     return (
       <div className={styles.overlay}>

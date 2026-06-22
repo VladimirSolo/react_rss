@@ -5,7 +5,7 @@ import { SearchBar } from '../search-bar/search-bar';
 import { YearSelector } from '../year-selector/year-selector';
 import { CountryList } from '../country-list/country-list';
 import { ColumnModal } from '../column-modal/column-modal';
-import { getAvailableYears, getAvailableColumns } from '../../utils/data-transformers';
+import { getAvailableYears } from '../../utils/data-transformers';
 
 import styles from './app.module.css';
 
@@ -33,7 +33,6 @@ export const App = () => {
   });
 
   const years = useMemo(() => (data ? getAvailableYears(data) : []), [data]);
-  const availableColumns = useMemo(() => getAvailableColumns(), []);
 
   const handleSearch = useCallback((value: string) => {
     setState((prev) => ({ ...prev, searchQuery: value }));
@@ -43,16 +42,16 @@ export const App = () => {
     setState((prev) => ({ ...prev, selectedYear: year }));
   }, []);
 
-  const handleSortFieldChange = useCallback((field: 'name' | 'population') => {
+  const handleSortFieldChange = (field: 'name' | 'population') => {
     setState((prev) => ({ ...prev, sortField: field }));
-  }, []);
+  };
 
-  const handleSortOrderToggle = useCallback(() => {
+  const handleSortOrderToggle = () => {
     setState((prev) => ({
       ...prev,
       sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc',
     }));
-  }, []);
+  };
 
   const handleColumnToggle = useCallback((column: string) => {
     setState((prev) => ({
@@ -123,7 +122,6 @@ export const App = () => {
 
       <ColumnModal
         isOpen={state.isColumnModalOpen}
-        availableColumns={availableColumns}
         selectedColumns={state.selectedColumns}
         onToggle={handleColumnToggle}
         onClose={handleModalToggle}
